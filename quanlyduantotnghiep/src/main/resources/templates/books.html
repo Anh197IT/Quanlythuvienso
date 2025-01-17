@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý sách</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Quản lý sách</h2>
+
+        <!-- Form Thêm hoặc Chỉnh sửa sách -->
+        <form id="book-form" onsubmit="submitBookForm(event)">
+            <div class="mb-3">
+                <label for="title" class="form-label">Tiêu đề</label>
+                <input type="text" class="form-control" id="title" placeholder="Nhập tiêu đề sách" required>
+            </div>
+            <div class="mb-3">
+                <label for="author" class="form-label">Tác giả</label>
+                <input type="text" class="form-control" id="author" placeholder="Nhập tên tác giả" required>
+            </div>
+            <div class="mb-3">
+                <label for="published_date" class="form-label">Ngày xuất bản</label>
+                <input type="date" class="form-control" id="published_date" required>
+            </div>
+            <div class="mb-3">
+                <label for="isbn" class="form-label">ISBN</label>
+                <input type="text" class="form-control" id="isbn" placeholder="Nhập mã ISBN" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Lưu sách</button>
+        </form>
+
+        <!-- Bảng Danh sách sách -->
+        <table class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tiêu đề</th>
+                    <th>Tác giả</th>
+                    <th>Ngày xuất bản</th>
+                    <th>ISBN</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="books-table-body">
+                <!-- Các dòng sách sẽ được chèn vào đây từ JavaScript -->
+            </tbody>
+        </table>
+        <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+    </div>
+
+    <script>
+        let currentBookId = null;
+
+        // Hàm tải danh sách sách
+        async function fetchBooks() {
+            try {
+                const response = await fetch('/books/json');
+                if (!response.ok) {
+                    throw new Error('Không thể tải dữ liệu sách.');
+                }
+                const data = await response.json();
+                const tableBody = document.getElementById('books-table-body');
+                tableBody.innerHTML = '';
+                data.forEach((book) => {
+                    const publishedDate = book.published_date;
+                    const row = `
+                        <tr>
+                            <td>${book.id}</td>
+                            <td>${book.title}</td>
+                            <td>${book.author}</td>
+                            <td>${book.publishedDate}</td>
+                            <td>${book.isbn}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm" onclick="editBook(${book.id})">Sửa</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteBook(${book.id})">Xóa</button>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            } catch (error) {
+                console.error('Error fetching books:', error);
+                document.getElementById('error-message').textContent = 'Không thể tải dữ liệu sách.';
+                document.getElementById('error-message').style.display = 'block';
+            }
+        }
+
+     // Hàm xóa sách
+        async function deleteBook(bookId) {
+            if (confirm('Bạn có chắc chắn muốn xóa sách này?')) {
+                try {
+                    const response = await fetch(`/books/delete/${bookId}`, {
+                        method: 'DELETE',
+                    });
+                    if (response.ok) {
+                        alert('Sách đã được xóa.');
+                        fetchBooks();  // Cập nhật lại danh sách sau khi xóa
+                    } else {
+                        alert('Có lỗi khi xóa sách.');
+                    }
+                } catch (error) {
+                    console.error('Error deleting book:', error);
+                    alert('Có lỗi khi xóa sách.');
+                }
+            }
+        }
+
+
+        // Hàm chỉnh sửa sách
+        async function editBook(bookId) {
+            try {
+                const response = await fetch(`/books/${bookId}`);
+                if (response.ok) {
+                    const book = await response.json();
+                    currentBookId = book.id;
+                    document.getElementById('title').value = book.title;
+                    document.getElementById('author').value = book.author;
+                    document.getElementById('published_date').value = new Date(book.publishedDate).toISOString().split('T')[0];
+                    document.getElementById('isbn').value = book.isbn;
+                }
+            } catch (error) {
+                console.error('Error fetching book:', error);
+                alert('Có lỗi khi tải thông tin sách.');
+            }
+        }
+
+        // Hàm xử lý form khi submit
+        async function submitBookForm(event) {
+            event.preventDefault();
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const publishedDate = document.getElementById('published_date').value;
+            const isbn = document.getElementById('isbn').value;
+
+            const book = { title, author, published_date: publishedDate, isbn };
+
+            try {
+                let response;
+                if (currentBookId) {
+                    // Cập nhật sách
+                    response = await fetch(`/books/update/${currentBookId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(book),
+                    });
+                } else {
+                    // Thêm mới sách
+                    response = await fetch('/books/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(book),
+                    });
+                }
+
+                if (response.ok) {
+                    alert('Sách đã được lưu');
+                    fetchBooks();  // Cập nhật lại danh sách sách
+                    document.getElementById('book-form').reset(); // Làm sạch form
+                    currentBookId = null;
+                } else {
+                    const error = await response.text();
+                    alert('Có lỗi khi lưu sách: ' + error);
+                }
+            } catch (error) {
+                console.error('Error submitting book form:', error);
+                alert('Có lỗi khi lưu sách.');
+            }
+        }
+
+        // Tải danh sách sách khi trang được tải
+        fetchBooks();
+    </script>
+</body>
+</html>

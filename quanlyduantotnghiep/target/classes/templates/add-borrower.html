@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thêm người mượn sách</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Thêm người mượn sách</h1>
+        <form action="/borrowers/add" method="post">
+            <div class="mb-3">
+                <label for="fullName" class="form-label">Tên người mượn</label>
+                <input type="text" id="fullName" name="fullName" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" id="email" name="email" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="phoneNumber" class="form-label">Số điện thoại</label>
+                <input type="text" id="phoneNumber" name="phoneNumber" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="bookTitle" class="form-label">Tên sách</label>
+                <input type="text" id="bookTitle" name="bookTitle" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="borrowDate" class="form-label">Ngày mượn</label>
+                <input type="date" id="borrowDate" name="borrowDate" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="returnDate" class="form-label">Ngày trả</label>
+                <input type="date" id="returnDate" name="returnDate" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Thêm người mượn sách</button>
+        </form>
+    </div>
+</body>
+</html>

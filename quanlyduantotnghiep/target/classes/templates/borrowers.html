@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách người mượn sách</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Danh sách người mượn sách</h2>
+
+        <!-- Bảng Danh sách người mượn sách -->
+        <table class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên người mượn</th>
+                    <th>Email</th>
+                    <th>Số điện thoại</th>
+                    <th>Tên sách</th>
+                    <th>Ngày mượn</th>
+                    <th>Ngày trả</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="borrowers-table-body">
+                <!-- Các dòng người mượn sách sẽ được chèn vào đây từ JavaScript -->
+            </tbody>
+        </table>
+
+        <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+    </div>
+
+	<div id="edit-form-container" class="mt-4" style="display: none;">
+		    <h3>Chỉnh sửa thông tin người mượn</h3>
+		    <form id="edit-form">
+		        <div class="mb-3">
+		            <label for="fullName" class="form-label">Tên người mượn</label>
+		            <input type="text" id="fullName" class="form-control" required>
+		        </div>
+		        <div class="mb-3">
+		            <label for="email" class="form-label">Email</label>
+		            <input type="email" id="email" class="form-control" required>
+		        </div>
+		        <div class="mb-3">
+		            <label for="phoneNumber" class="form-label">Số điện thoại</label>
+		            <input type="text" id="phoneNumber" class="form-control" required>
+		        </div>
+		        <div class="mb-3">
+		            <label for="bookTitle" class="form-label">Tên sách</label>
+		            <input type="text" id="bookTitle" class="form-control" required>
+		        </div>
+		        <div class="mb-3">
+		            <label for="borrowDate" class="form-label">Ngày mượn</label>
+		            <input type="date" id="borrowDate" class="form-control" required>
+		        </div>
+		        <div class="mb-3">
+		            <label for="returnDate" class="form-label">Ngày trả</label>
+		            <input type="date" id="returnDate" class="form-control" required>
+		        </div>
+		        <button type="button" class="btn btn-primary" onclick="saveBorrower()">Lưu</button>
+		        <button type="button" class="btn btn-secondary" onclick="cancelEdit()">Hủy</button>
+		    </form>
+		</div>
+		
+    <script>
+        let currentBorrowerId = null;
+
+        // Hàm tải danh sách người mượn sách
+        async function fetchBorrowers() {
+            try {
+                const response = await fetch('/borrowers/json');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+                const data = await response.json();
+                const tableBody = document.getElementById('borrowers-table-body');
+                tableBody.innerHTML = '';
+                data.forEach((borrower, index) => {
+                    const row = `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${borrower.fullName}</td>
+                            <td>${borrower.email}</td>
+                            <td>${borrower.phoneNumber}</td>
+                            <!-- Thay ô nhập liệu bằng tên sách hiển thị luôn -->
+                            <td>${borrower.bookTitle}</td>
+                            <td>${new Date(borrower.borrowDate).toLocaleDateString('vi-VN')}</td>
+                            <td>${new Date(borrower.returnDate).toLocaleDateString('vi-VN')}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm" onclick="editBorrower(${borrower.id})">Sửa</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteBorrower(${borrower.id})">Xóa</button>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            } catch (error) {
+                console.error('Error fetching borrowers:', error);
+                document.getElementById('error-message').textContent = 'Không thể tải danh sách người mượn sách.';
+                document.getElementById('error-message').style.display = 'block';
+            }
+        }
+
+        // Hàm xóa người mượn sách
+        async function deleteBorrower(borrowerId) {
+            if (confirm('Bạn có chắc chắn muốn xóa người mượn sách này?')) {
+                try {
+                    const response = await fetch(`/borrowers/delete/${borrowerId}`, {
+                        method: 'DELETE',
+                    });
+                    if (response.ok) {
+                        alert('Người mượn sách đã được xóa');
+                        fetchBorrowers();  // Cập nhật lại danh sách sau khi xóa
+                    } else {
+                        alert('Có lỗi khi xóa người mượn sách.');
+                    }
+                } catch (error) {
+                    console.error('Error deleting borrower:', error);
+                    alert('Có lỗi khi xóa người mượn sách.');
+                }
+            }
+        }
+
+        // Hàm chỉnh sửa người mượn sách
+		function editBorrower(borrowerId) {
+		    fetch(`/borrowers/${borrowerId}`)
+		        .then(response => response.json())
+		        .then(borrower => {
+		            currentBorrowerId = borrower.id;
+
+		            // Điền thông tin người mượn vào form
+		            document.getElementById('fullName').value = borrower.fullName;
+		            document.getElementById('email').value = borrower.email;
+		            document.getElementById('phoneNumber').value = borrower.phoneNumber;
+		            document.getElementById('bookTitle').value = borrower.bookTitle;
+		            document.getElementById('borrowDate').value = new Date(borrower.borrowDate).toISOString().split('T')[0];
+		            document.getElementById('returnDate').value = new Date(borrower.returnDate).toISOString().split('T')[0];
+
+		            // Hiển thị form chỉnh sửa
+		            document.getElementById('edit-form-container').style.display = 'block';
+		        })
+		        .catch(error => {
+		            console.error('Error fetching borrower:', error);
+		            alert('Không thể tải thông tin người mượn sách.');
+		        });
+		}
+		function saveBorrower() {
+		    const updatedBorrower = {
+		        id: currentBorrowerId,
+		        fullName: document.getElementById('fullName').value,
+		        email: document.getElementById('email').value,
+		        phoneNumber: document.getElementById('phoneNumber').value,
+		        bookTitle: document.getElementById('bookTitle').value,
+		        borrowDate: document.getElementById('borrowDate').value,
+		        returnDate: document.getElementById('returnDate').value,
+		    };
+
+		    fetch(`/borrowers/update/${currentBorrowerId}`, {
+		        method: 'PUT',
+		        headers: { 'Content-Type': 'application/json' },
+		        body: JSON.stringify(updatedBorrower),
+		    })
+		        .then(response => {
+		            if (response.ok) {
+		                alert('Cập nhật thành công');
+		                document.getElementById('edit-form-container').style.display = 'none';
+		                fetchBorrowers(); // Cập nhật danh sách
+		            } else {
+		                alert('Cập nhật thất bại');
+		            }
+		        })
+		        .catch(error => {
+		            console.error('Error updating borrower:', error);
+		            alert('Có lỗi xảy ra khi cập nhật thông tin.');
+		        });
+		}
+
+		function cancelEdit() {
+		    document.getElementById('edit-form-container').style.display = 'none';
+		    currentBorrowerId = null;
+		}
+
+
+		
+
+        // Tải danh sách người mượn sách khi trang được tải
+        fetchBorrowers();
+    </script>
+
+</body>
+</html>
